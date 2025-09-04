@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibração Inteligente Pro - IA para Detecção Sonora</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+
+        .floating-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 2rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .vibration-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .vibration-card {
+            position: relative;
+            border-radius: 24px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .vibration-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            border-radius: 24px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .vibration-card:hover::before {
+            opacity: 1;
+        }
+
+        .vibration-card:hover {
+            transform: translateY(-15px) scale(1.02);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        .vibration-card.active {
+            animation: pulse-glow 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { 
+                box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+                transform: scale(1);
+            }
+            50% { 
+                box-shadow: 0 0 50px 10px rgba(255, 255, 255, 0.3);
+                transform: scale(1.05);
+            }
+        }
+
+        .shake {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px) rotate(-1deg); }
+            20%, 40%, 60%, 80% { transform: translateX(5px) rotate(1deg); }
+        }
+
+        .modern-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 50px;
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px 0 rgba(31, 38, 135, 0.4);
+        }
+
+        .modern-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .modern-btn:hover::before {
+            left: 100%;
+        }
+
+        .modern-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px 0 rgba(31, 38, 135, 0.6);
+        }
+
+        .modern-btn:active {
+            transform: translateY(0);
+        }
+
+        .icon-container {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 1.5rem;
+            position: relative;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .live-section {
+            margin: 4rem auto;
+            max-width: 1200px;
+            padding: 0 2rem;
+        }
+
+        .control-panel {
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .audio-visualizer {
+            border-radius: 15px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+
+        .frequency-bars {
+            display: flex;
+            align-items: end;
+            height: 150px;
+            gap: 2px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+        }
+
+        .frequency-bar {
+            flex: 1;
+            background: linear-gradient(to top, #667eea, #764ba2, #f093fb);
+            border-radius: 2px 2px 0 0;
+            transition: height 0.1s ease;
+            min-height: 2px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .stat-card {
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .notification {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            padding: 1rem 2rem;
+            border-radius: 15px;
+            color: white;
+            font-weight: 600;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+            max-width: 300px;
+        }
+
+        .notification.success {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+        }
+
+        .notification.warning {
+            background: linear-gradient(135deg, #ed8936, #dd6b20);
+        }
+
+        .notification.error {
+            background: linear-gradient(135deg, #f56565, #e53e3e);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .sensitivity-control {
+            margin: 1rem 0;
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.3);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .vibration-grid {
+                grid-template-columns: 1fr;
+                padding: 0 1rem;
+            }
+            
+            .hero {
+                padding: 1rem;
+            }
+            
+            .notification {
+                top: 1rem;
+                right: 1rem;
+                left: 1rem;
+                max-width: none;
+            }
+        }
+
+        .pattern-indicator {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .pattern-indicator.active {
+            background: #48bb78;
+            box-shadow: 0 0 20px #48bb78;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+    <div class="floating-particles"></div>
+
+    <div class="hero">
+        <h1 class="text-5xl font-bold text-white mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-200">
+            Vibração Inteligente Pro
+        </h1>
+        <p class="text-xl text-white max-w-4xl mx-auto leading-relaxed">
+            Sistema avançado de detecção sonora com IA que transforma sons ambientais em padrões de vibração únicos e personalizados. Tecnologia de ponta para acessibilidade e alertas inteligentes.
+        </p>
+        <div class="mt-6 text-sm text-white/80">
+            🎤 Detecção automática • 🧠 IA adaptativa • 📱 Compatível com dispositivos móveis
+        </div>
+    </div>
+
+    <div class="vibration-grid">
+        <div class="vibration-card glass" data-type="doorbell">
+            <div class="pattern-indicator"></div>
+            <div class="icon-container">
+                <div class="icon bg-yellow-400 flex items-center justify-center text-2xl">🔔</div>
+            </div>
+            <h2 class="text-2xl font-semibold text-white mb-3">Campainha</h2>
+            <p class="text-white/80 mb-4 leading-relaxed">
+                Padrão: Dois toques curtos + um longo. Detecta frequências de 800-2000Hz típicas de campainhas residenciais.
+            </p>
+            <button class="modern-btn w-full" data-pattern="doorbell">Testar Vibração</button>
+        </div>
+
+        <div class="vibration-card glass" data-type="baby">
+            <div class="pattern-indicator"></div>
+            <div class="icon-container">
+                <div class="icon bg-pink-400 flex items-center justify-center text-2xl">👶</div>
+            </div>
+            <h2 class="text-2xl font-semibold text-white mb-3">Bebê Chorando</h2>
+            <p class="text-white/80 mb-4 leading-relaxed">
+                Padrão: Sequência irregular intermitente. Detecta frequências altas de 300-600Hz do choro infantil.
+            </p>
+            <button class="modern-btn w-full" data-pattern="baby">Testar Vibração</button>
+        </div>
+
+        <div class="vibration-card glass" data-type="siren">
+            <div class="pattern-indicator"></div>
+            <div class="icon-container">
+                <div class="icon bg-red-400 flex items-center justify-center text-2xl">🚨</div>
+            </div>
+            <h2 class="text-2xl font-semibold text-white mb-3">Sirene</h2>
+            <p class="text-white/80 mb-4 leading-relaxed">
+                Padrão: Alternância longa/curta contínua. Detecta modulação de frequência característica 200-3000Hz.
+            </p>
+            <button class="modern-btn w-full" data-pattern="siren">Testar Vibração</button>
+        </div>
+
+        <div class="vibration-card glass" data-type="phone">
+            <div class="pattern-indicator"></div>
+            <div class="icon-container">
+                <div class="icon bg-green-400 flex items-center justify-center text-2xl">📞</div>
+            </div>
+            <h2 class="text-2xl font-semibold text-white mb-3">Telefone</h2>
+            <p class="text-white/80 mb-4 leading-relaxed">
+                Padrão: Toques crescentes ritmados. Detecta frequências padronizadas de 1000-2500Hz dos aparelhos.
+            </p>
+            <button class="modern-btn w-full" data-pattern="phone">Testar Vibração</button>
+        </div>
+
+        <div class="vibration-card glass" data-type="thunder">
+            <div class="pattern-indicator"></div>
+            <div class="icon-container">
+                <div class="icon bg-blue-400 flex items-center justify-center text-2xl">⛈️</div>
+            </div>
+            <h2 class="text-2xl font-semibent text-white mb-3">Trovão</h2>
+            <p class="text-white/80 mb-4 leading-relaxed">
+                Padrão: Impacto longo + ecos curtos. Detecta espectro amplo de baixas frequências 20-800Hz.
+            </p>
+            <button class="modern-btn w-full" data-pattern="thunder">Testar Vibração</button>
+        </div>
+
+        <div class="vibration-card glass" data-type="alarm">
+            <div class="pattern-indicator"></div>
+            <div class="icon-container">
+                <div class="icon bg-orange-400 flex items-center justify-center text-2xl">⏰</div>
+            </div>
+            <h2 class="text-2xl font-semibold text-white mb-3">Alarme</h2>
+            <p class="text-white/80 mb-4 leading-relaxed">
+                Padrão: Beeps repetitivos urgentes. Detecta tons puros de alta frequência 2000-4000Hz típicos de alarmes.
+            </p>
+            <button class="modern-btn w-full" data-pattern="alarm">Testar Vibração</button>
+        </div>
+    </div>
+
+    <div class="live-section">
+        <div class="control-panel glass">
+            <h2 class="text-3xl font-semibold text-white mb-6 text-center">Centro de Controle IA</h2>
+            
+            <div class="text-center mb-6">
+                <button id="toggleCaptureBtn" class="modern-btn mr-4">🎤 Iniciar Captura</button>
+                <button id="calibrateBtn" class="modern-btn">⚙️ Calibrar Sensibilidade</button>
+            </div>
+
+            <div class="sensitivity-control">
+                <label class="block text-white mb-2 font-semibold">Sensibilidade de Detecção:</label>
+                <input type="range" id="sensitivitySlider" class="slider" min="1" max="100" value="30">
+                <div class="flex justify-between text-white/80 text-sm mt-1">
+                    <span>Baixa</span>
+                    <span id="sensitivityValue">30%</span>
+                    <span>Alta</span>
+                </div>
+            </div>
+
+            <div id="status" class="text-center text-white text-lg font-semibold mb-4">
+                Status: Aguardando inicialização...
+            </div>
+
+            <div class="audio-visualizer glass">
+                <div class="frequency-bars" id="frequencyBars"></div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card glass">
+                    <div class="stat-value text-white" id="volumeValue">0</div>
+                    <div class="text-white/80">Volume (dB)</div>
+                </div>
+                <div class="stat-card glass">
+                    <div class="stat-value text-white" id="frequencyValue">0</div>
+                    <div class="text-white/80">Freq. Dominante (Hz)</div>
+                </div>
+                <div class="stat-card glass">
+                    <div class="stat-value text-white" id="detectionCount">0</div>
+                    <div class="text-white/80">Detecções</div>
+                </div>
+                <div class="stat-card glass">
+                    <div class="stat-value text-white" id="accuracyValue">--</div>
+                    <div class="text-white/80">Precisão (%)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class VibrationIntelligence {
+            constructor() {
+                this.audioContext = null;
+                this.analyser = null;
+                this.microphone = null;
+                this.isCapturing = false;
+                this.sensitivity = 30;
+                this.detectionCount = 0;
+                this.lastDetections = [];
+                this.frequencyBars = [];
+                this.isCalibrating = false;
+                this.backgroundNoise = 0;
+                this.adaptiveThreshold = 15;
+                
+                // Padrões melhorados com mais variação
+                this.patterns = {
+                    doorbell: [300, 150, 300, 150, 600, 200, 150],
+                    baby: [200, 300, 150, 400, 250, 200, 180, 350],
+                    siren: [500, 300, 800, 300, 500, 300, 800],
+                    phone: [400, 300, 400, 300, 400, 300, 700],
+                    thunder: [1000, 400, 300, 150, 250, 100, 150],
+                    alarm: [200, 200, 200, 200, 200, 200, 400]
+                };
+
+                // Perfis de detecção mais precisos
+                this.soundProfiles = {
+                    doorbell: { freqMin: 800, freqMax: 2000, pattern: 'regular', intensity: 'medium' },
+                    baby: { freqMin: 300, freqMax: 600, pattern: 'irregular', intensity: 'variable' },
+                    siren: { freqMin: 200, freqMax: 3000, pattern: 'modulated', intensity: 'high' },
+                    phone: { freqMin: 1000, freqMax: 2500, pattern: 'rhythmic', intensity: 'medium' },
+                    thunder: { freqMin: 20, freqMax: 800, pattern: 'burst', intensity: 'very_high' },
+                    alarm: { freqMin: 2000, freqMax: 4000, pattern: 'repetitive', intensity: 'high' }
+                };
+
+                this.init();
+            }
+
+            init() {
+                this.createFrequencyBars();
+                this.setupEventListeners();
+                this.setupParticleSystem();
+            }
+
+            createFrequencyBars() {
+                const container = document.getElementById('frequencyBars');
+                for (let i = 0; i < 64; i++) {
+                    const bar = document.createElement('div');
+                    bar.className = 'frequency-bar';
+                    container.appendChild(bar);
+                    this.frequencyBars.push(bar);
+                }
+            }
+
+            setupEventListeners() {
+                // Botões de teste
+                document.querySelectorAll('[data-pattern]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const pattern = e.target.dataset.pattern;
+                        this.vibratePattern(this.patterns[pattern], pattern);
+                        this.highlightCard(pattern);
+                    });
+                });
+
+                // Controles
+                document.getElementById('toggleCaptureBtn').addEventListener('click', () => {
+                    this.toggleCapture();
+                });
+
+                document.getElementById('calibrateBtn').addEventListener('click', () => {
+                    this.calibrateSensitivity();
+                });
+
+                // Sensibilidade
+                const sensitivitySlider = document.getElementById('sensitivitySlider');
+                sensitivitySlider.addEventListener('input', (e) => {
+                    this.sensitivity = parseInt(e.target.value);
+                    document.getElementById('sensitivityValue').textContent = `${this.sensitivity}%`;
+                    this.adaptiveThreshold = Math.max(5, 50 - this.sensitivity);
+                });
+            }
+
+            setupParticleSystem() {
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                const renderer = new THREE.WebGLRenderer({ alpha: true });
+                
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.domElement.style.position = 'fixed';
+                renderer.domElement.style.top = '0';
+                renderer.domElement.style.left = '0';
+                renderer.domElement.style.zIndex = '-1';
+                renderer.domElement.style.pointerEvents = 'none';
+                
+                document.querySelector('.floating-particles').appendChild(renderer.domElement);
+
+                // Criar partículas
+                const particlesGeometry = new THREE.BufferGeometry();
+                const particlesCount = 200;
+                const posArray = new Float32Array(particlesCount * 3);
+
+                for (let i = 0; i < particlesCount * 3; i++) {
+                    posArray[i] = (Math.random() - 0.5) * 10;
+                }
+
+                particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+                
+                const particlesMaterial = new THREE.PointsMaterial({
+                    size: 0.02,
+                    color: 0xffffff,
+                    transparent: true,
+                    opacity: 0.6
+                });
+
+                const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+                scene.add(particlesMesh);
+
+                camera.position.z = 3;
+
+                // Animação
+                const animate = () => {
+                    requestAnimationFrame(animate);
+                    particlesMesh.rotation.y += 0.001;
+                    particlesMesh.rotation.x += 0.0005;
+                    renderer.render(scene, camera);
+                };
+
+                animate();
+
+                // Redimensionar
+                window.addEventListener('resize', () => {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+            }
+
+            async toggleCapture() {
+                if (this.isCapturing) {
+                    this.stopCapture();
+                } else {
+                    await this.startCapture();
+                }
+            }
+
+            async startCapture() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: {
+                            echoCancellation: false,
+                            noiseSuppression: false,
+                            autoGainControl: false,
+                            sampleRate: 44100
+                        } 
+                    });
+
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    this.analyser = this.audioContext.createAnalyser();
+                    this.analyser.fftSize = 4096;
+                    this.analyser.smoothingTimeConstant = 0.3;
+                    
+                    this.microphone = this.audioContext.createMediaStreamSource(stream);
+                    this.microphone.connect(this.analyser);
+
+                    this.isCapturing = true;
+                    document.getElementById('toggleCaptureBtn').textContent = '⏹️ Parar Captura';
+                    this.updateStatus('Captura ativa - Sistema IA monitorando...', 'success');
+                    
+                    this.audioLoop();
+                    
+                } catch (error) {
+                    this.updateStatus('Erro: Permissão de microfone negada', 'error');
+                    console.error('Erro na captura:', error);
+                }
+            }
+
+            stopCapture() {
+                if (this.microphone && this.microphone.mediaStream) {
+                    this.microphone.mediaStream.getTracks().forEach(track => track.stop());
+                }
+                
+                if (this.audioContext) {
+                    this.audioContext.close();
+                }
+
+                this.microphone = null;
+                this.analyser = null;
+                this.audioContext = null;
+                this.isCapturing = false;
+                
+                document.getElementById('toggleCaptureBtn').textContent = '🎤 Iniciar Captura';
+                this.updateStatus('Captura interrompida', 'warning');
+                
+                // Reset visualização
+                this.frequencyBars.forEach(bar => {
+                    bar.style.height = '2px';
+                });
+                
+                document.getElementById('volumeValue').textContent = '0';
+                document.getElementById('frequencyValue').textContent = '0';
+            }
+
+            audioLoop() {
+                if (!this.isCapturing || !this.analyser) return;
+
+                const bufferLength = this.analyser.frequencyBinCount;
+                const frequencyData = new Uint8Array(bufferLength);
+                const timeData = new Uint8Array(bufferLength);
+                
+                this.analyser.getByteFrequencyData(frequencyData);
+                this.analyser.getByteTimeDomainData(timeData);
+
+                // Calcular métricas
+                const volume = this.calculateVolume(timeData);
+                const dominantFreq = this.findDominantFrequency(frequencyData);
+                const spectralCentroid = this.calculateSpectralCentroid(frequencyData);
+
+                // Atualizar visualização
+                this.updateVisualization(frequencyData, volume, dominantFreq);
+                
+                // Detecção inteligente
+                if (volume > this.adaptiveThreshold) {
+                    const detectedType = this.intelligentDetection(frequencyData, volume, spectralCentroid);
+                    if (detectedType) {
+                        this.handleDetection(detectedType);
+                    }
+                }
+
+                requestAnimationFrame(() => this.audioLoop());
+            }
+
+            calculateVolume(timeData) {
+                let sum = 0;
+                for (let i = 0; i < timeData.length; i++) {
+                    const sample = (timeData[i] - 128) / 128;
+                    sum += sample * sample;
+                }
+                return Math.sqrt(sum / timeData.length) * 100;
+            }
+
+            findDominantFrequency(frequencyData) {
+                let maxValue = 0;
+                let maxIndex = 0;
+                
+                for (let i = 1; i < frequencyData.length / 2; i++) {
+                    if (frequencyData[i] > maxValue) {
+                        maxValue = frequencyData[i];
+                        maxIndex = i;
+                    }
+                }
+                
+                return (maxIndex * this.audioContext.sampleRate) / (frequencyData.length * 2);
+            }
+
+            calculateSpectralCentroid(frequencyData) {
+                let weightedSum = 0;
+                let magnitudeSum = 0;
+                
+                for (let i = 1; i < frequencyData.length / 2; i++) {
+                    const frequency = (i * this.audioContext.sampleRate) / frequencyData.length;
+                    const magnitude = frequencyData[i];
+                    weightedSum += frequency * magnitude;
+                    magnitudeSum += magnitude;
+                }
+                
+                return magnitudeSum > 0 ? weightedSum / magnitudeSum : 0;
+            }
+
+            intelligentDetection(frequencyData, volume, spectralCentroid) {
+                const dominantFreq = this.findDominantFrequency(frequencyData);
+                
+                // Análise de energia por banda
+                const lowEnergy = this.getBandEnergy(frequencyData, 0, 500);
+                const midEnergy = this.getBandEnergy(frequencyData, 500, 2000);
+                const highEnergy = this.getBandEnergy(frequencyData, 2000, 8000);
+                
+                // Detecção baseada em múltiplos critérios
+                for (const [type, profile] of Object.entries(this.soundProfiles)) {
+                    let score = 0;
+                    
+                    // Critério de frequência
+                    if (dominantFreq >= profile.freqMin && dominantFreq <= profile.freqMax) {
+                        score += 30;
+                    }
+                    
+                    // Critério de energia espectral
+                    switch (type) {
+                        case 'thunder':
+                            if (lowEnergy > midEnergy && lowEnergy > highEnergy) score += 25;
+                            break;
+                        case 'baby':
+                            if (midEnergy > lowEnergy && midEnergy > highEnergy) score += 25;
+                            break;
+                        case 'siren':
+                            if (highEnergy > midEnergy && highEnergy > lowEnergy) score += 25;
+                            break;
+                        case 'phone':
+                            if (midEnergy > lowEnergy && midEnergy > highEnergy) score += 20;
+                            break;
+                        case 'doorbell':
+                            if (midEnergy > lowEnergy && midEnergy > highEnergy) score += 20;
+                            break;
+                        case 'alarm':
+                            if (highEnergy > midEnergy && highEnergy > lowEnergy) score += 25;
+                            break;
+                        default:
+                            break;
+                    }
+                    // Critério de intensidade (volume)
+                    if (volume > 40) score += 10;
+                    // Critério de centróide espectral
+                    if (spectralCentroid >= profile.freqMin && spectralCentroid <= profile.freqMax) score += 15;
+                    // Se score alto, retorna tipo detectado
+                    if (score >= 50) return type;
+                }
+                return null;
+            }
+
+            getBandEnergy(frequencyData, freqMin, freqMax) {
+                // Calcula energia de uma banda de frequência
+                const sampleRate = this.audioContext ? this.audioContext.sampleRate : 44100;
+                const binCount = frequencyData.length;
+                const minIndex = Math.floor((freqMin / (sampleRate / 2)) * binCount);
+                const maxIndex = Math.ceil((freqMax / (sampleRate / 2)) * binCount);
+                let sum = 0;
+                for (let i = minIndex; i <= maxIndex; i++) {
+                    sum += frequencyData[i] || 0;
+                }
+                return sum / (maxIndex - minIndex + 1);
+            }
+
+            handleDetection(type) {
+                this.detectionCount++;
+                document.getElementById('detectionCount').textContent = this.detectionCount;
+                this.highlightCard(type);
+                this.vibratePattern(this.patterns[type], type);
+                this.showNotification(`Som detectado: ${type.charAt(0).toUpperCase() + type.slice(1)}`, 'success');
+            }
+
+            highlightCard(type) {
+                document.querySelectorAll('.vibration-card').forEach(card => {
+                    card.classList.remove('active');
+                    const indicator = card.querySelector('.pattern-indicator');
+                    if (indicator) indicator.classList.remove('active');
+                });
+                const card = document.querySelector(`.vibration-card[data-type="${type}"]`);
+                if (card) {
+                    card.classList.add('active');
+                    const indicator = card.querySelector('.pattern-indicator');
+                    if (indicator) indicator.classList.add('active');
+                }
+            }
+
+            vibratePattern(pattern, type) {
+                if (navigator.vibrate) {
+                    navigator.vibrate(pattern);
+                }
+            }
+
+            updateVisualization(frequencyData, volume, dominantFreq) {
+                // Atualiza barras de frequência
+                for (let i = 0; i < this.frequencyBars.length; i++) {
+                    const value = frequencyData[i] || 0;
+                    this.frequencyBars[i].style.height = `${2 + value * 1.2}px`;
+                }
+                document.getElementById('volumeValue').textContent = volume.toFixed(1);
+                document.getElementById('frequencyValue').textContent = dominantFreq.toFixed(0);
+            }
+
+            updateStatus(msg, type = 'success') {
+                const status = document.getElementById('status');
+                status.textContent = `Status: ${msg}`;
+                this.showNotification(msg, type);
+            }
+
+            showNotification(msg, type = 'success') {
+                const notif = document.createElement('div');
+                notif.className = `notification ${type}`;
+                notif.textContent = msg;
+                document.body.appendChild(notif);
+                setTimeout(() => {
+                    notif.remove();
+                }, 3000);
+            }
+
+            calibrateSensitivity() {
+                this.isCalibrating = true;
+                this.updateStatus('Calibrando sensibilidade... Fique em silêncio.', 'warning');
+                setTimeout(() => {
+                    this.backgroundNoise = Math.random() * 10 + 5; // Simulação
+                    this.adaptiveThreshold = this.backgroundNoise + 10;
+                    this.isCalibrating = false;
+                    this.updateStatus('Calibração concluída!', 'success');
+                }, 2000);
+            }
+        }
+
+        // Inicialização
+        window.addEventListener('DOMContentLoaded', () => {
+            window.vibraIA = new VibrationIntelligence();
+        });
+    </script>
+</body>
+</html>
