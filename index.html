@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vibração Inteligente Pro - IA para Detecção Sonora</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind removido para produção. Use o arquivo gerado localmente. -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <link href="output.css" rel="stylesheet">
     <style>
@@ -769,8 +769,14 @@
     }
 
     vibratePattern(pattern, type) {
-        if (navigator.vibrate) {
-            navigator.vibrate(pattern);
+        if ("vibrate" in navigator) {
+            const vibResult = navigator.vibrate(pattern);
+            // Alguns navegadores retornam false se não suportam ou bloqueiam
+            if (vibResult === false) {
+                this.showNotification('Seu dispositivo ou navegador bloqueou a vibração.', 'warning');
+            }
+        } else {
+            this.showNotification('Este dispositivo ou navegador não suporta vibração.', 'warning');
         }
     }
 
